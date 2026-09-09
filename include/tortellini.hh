@@ -151,8 +151,8 @@ public:
 
 		std::string &_value;
 
-		inline value(std::string &_value)
-		: _value(_value)
+		inline value(std::string &_cvalue)
+		: _value(_cvalue)
 		{}
 
 		value(const value &) = delete;
@@ -301,8 +301,8 @@ public:
 
 		std::map<std::string, std::string, case_insensitive> &_mapref;
 
-		inline section(std::map<std::string, std::string, case_insensitive> &_mapref)
-		: _mapref(_mapref)
+		inline section(std::map<std::string, std::string, case_insensitive> &_cmapref)
+		: _mapref(_cmapref)
 		{}
 
 		section(const section &) = delete;
