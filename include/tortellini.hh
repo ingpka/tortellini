@@ -314,6 +314,16 @@ public:
 		inline value operator[](std::string key) const {
 			return value(_mapref[key]);
 		}
+
+		const auto begin() const
+		{
+			return _mapref.begin();
+		}
+
+		const auto end() const
+		{
+			return _mapref.end();
+		}
 	};
 
 private:

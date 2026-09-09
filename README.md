@@ -63,10 +63,17 @@ int main() {
 	ini[""]["naked-key"] = "I'll be at the very top, without a section";
 
 	// You can also iterate over all sections
-	for (auto &pair : ini) {
-		std::cout << pair.name << "\n"; // the name of the section
-		int v = pair.section["some-key"] | 1234;
+	for (auto &sect : ini) {
+		std::cout << sect.name << "\n"; // the name of the section
+		int v = sect.section["some-key"] | 1234;
 		std::cout << "some-key=" << v << "\n";
+		
+		// And read their values
+		for (const auto &val : sect)
+		{
+			std::cout << sect.first << " "; // the key
+			std::cout << sect.second; // the value (as a string)
+		}
 	}
 
 	// (optional) Write INI to file.
