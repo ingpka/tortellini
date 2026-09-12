@@ -5,6 +5,8 @@
 The stupid - _and I mean really, really stupid_ - INI file reader and writer for C++11 and above. Calorie free (no dependencies)!
 
 ```c++
+// Now featuring support for -fno-exceptions!
+#define TORTELLINI_NO_EXCEPTIONS
 #include <tortellini.hh>
 
 // (optional)

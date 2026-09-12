@@ -20,3 +20,21 @@ jobs:
       - name: Test
         run: |
           cd build && ctest -VV
+  buildlinux-noexcept:
+    name: Test-fno-exceptions
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install CMake
+        run: |
+          sudo apt install cmake
+      - name: Configure
+        run: |
+          mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS="-fno-exceptions -DTORTELLINI_NO_EXCEPTIONS=1 -Wno-error=unused-function"
+      - name: Build
+        run: |
+          cmake --build build
+      - name: Test
+        run: |
+          cd build && ctest -VV

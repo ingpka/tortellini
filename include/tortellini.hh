@@ -1,6 +1,6 @@
+#pragma once
 #ifndef TORTELLINI_HH__
 #define TORTELLINI_HH__
-#pragma once
 
 #ifndef NOMINMAX
 #	define _TORTELLINI_UNDEFINE_NOMINMAX_PLEASE
@@ -91,6 +91,29 @@
 	----------------------------------------------------------------------------
 */
 
+#ifdef TORTELLINI_NO_EXCEPTIONS
+// Use exception-less variants (they set errno instead)
+#define _TORTELLINI_stoul std::strtoul
+#define _TORTELLINI_stoull std::strtoull
+#define _TORTELLINI_stol std::strtol
+#define _TORTELLINI_stoll std::strtoll
+#define _TORTELLINI_stof std::strtof
+#define _TORTELLINI_stod std::strtod
+#define _TORTELLINI_stold std::strtold
+// no strtoi
+#define _TORTELLINI_stoi std::strtol
+#include <cstdlib>
+#else
+#define _TORTELLINI_stoul std::stoul
+#define _TORTELLINI_stoull std::stoull
+#define _TORTELLINI_stol std::stol
+#define _TORTELLINI_stoll std::stoll
+#define _TORTELLINI_stof std::stof
+#define _TORTELLINI_stod std::stod
+#define _TORTELLINI_stold std::stold
+#define _TORTELLINI_stoi std::stoi
+#endif
+
 #include <map>
 #include <string>
 #include <iostream>
@@ -160,10 +183,23 @@ public:
 
 		inline value(value &&) = default;
 
+#ifdef TORTELLINI_NO_EXCEPTIONS
+		template <typename T, T (*Fn)(const char* str, char** str_end)>
+		static inline T strparse(const std::string &s, T fallback) {
+#else
 		template <typename T, T (*Fn)(const std::string &, size_t *)>
 		static inline T strparse(const std::string &s, T fallback) noexcept {
+#endif
 			if (s.empty()) return fallback;
 
+#ifdef TORTELLINI_NO_EXCEPTIONS
+			errno = 0;
+			const auto* cstr = s.c_str();
+			char* endptr;
+			T res = Fn(cstr, &endptr);
+			if (errno == ERANGE) return fallback;
+			return cstr == endptr ? fallback : res;
+#else
 			try {
 				size_t idx;
 				T res = Fn(s, &idx);
@@ -173,12 +209,26 @@ public:
 			} catch (std::invalid_argument &) {
 				return fallback;
 			}
+#endif
 		}
 
+#ifdef TORTELLINI_NO_EXCEPTIONS
+		template <typename T, T (*Fn)(const char* str, char** str_end, int)>
+		static inline T strparse(const std::string &s, T fallback) {
+#else
 		template <typename T, T (*Fn)(const std::string &, size_t *, int)>
 		static inline T strparse(const std::string &s, T fallback) noexcept {
+#endif
 			if (s.empty()) return fallback;
 
+#ifdef TORTELLINI_NO_EXCEPTIONS
+			errno = 0;
+			const auto* cstr = s.c_str();
+			char* endptr;
+			T res = Fn(cstr, &endptr, 0);
+			if (errno == ERANGE) return fallback;
+			return cstr == endptr ? fallback : res;
+#else
 			try {
 				size_t idx;
 				T res = Fn(s, &idx, 0);
@@ -188,6 +238,7 @@ public:
 			} catch (std::invalid_argument &) {
 				return fallback;
 			}
+#endif
 		}
 
 		template <typename T>
@@ -240,44 +291,65 @@ public:
 		}
 
 		inline unsigned long operator |(unsigned long fallback) const {
-			return strparse<unsigned long, std::stoul>(_value, fallback);
+			return strparse<unsigned long, _TORTELLINI_stoul>(_value, fallback);
 		}
 
 		inline unsigned long long operator |(unsigned long long fallback) const {
-			return strparse<unsigned long long, std::stoull>(_value, fallback);
+			return strparse<unsigned long long, _TORTELLINI_stoull>(_value, fallback);
 		}
 
 		inline long operator |(long fallback) const {
-			return strparse<long, std::stol>(_value, fallback);
+			return strparse<long, _TORTELLINI_stol>(_value, fallback);
 		}
 
 		inline long long operator |(long long fallback) const {
-			return strparse<long long, std::stoll>(_value, fallback);
+			return strparse<long long, _TORTELLINI_stoll>(_value, fallback);
 		}
 
 		inline float operator |(float fallback) const {
-			return strparse<float, std::stof>(_value, fallback);
+			return strparse<float, _TORTELLINI_stof>(_value, fallback);
 		}
 
 		inline double operator |(double fallback) const {
-			return strparse<double, std::stod>(_value, fallback);
+			return strparse<double, _TORTELLINI_stod>(_value, fallback);
 		}
 
 		inline long double operator |(long double fallback) const {
-			return strparse<long double, std::stold>(_value, fallback);
+			return strparse<long double, _TORTELLINI_stold>(_value, fallback);
 		}
 
 		inline int operator |(int fallback) const {
-			return strparse<int, std::stoi>(_value, fallback);
+#ifdef TORTELLINI_NO_EXCEPTIONS
+			// No strtoi
+			const long res = strparse<long, _TORTELLINI_stol>(_value, static_cast<long>(fallback));
+			if (
+				sizeof(int) != sizeof(long)
+				&& res > std::numeric_limits<int>::max()
+			) {
+				// out of range
+				return fallback;
+			}
+			return static_cast<int>(res);
+#else
+			return strparse<int, _TORTELLINI_stoi>(_value, fallback);
+#endif
 		}
 
 		inline unsigned int operator |(unsigned int fallback) const {
 			/*
 				This is necessary because there is no std::stou.
 			*/
+#ifdef TORTELLINI_NO_EXCEPTIONS
+			errno = 0;
+			const auto* cstr = _value.c_str();
+			char* endptr;
+			unsigned long ul = _TORTELLINI_stoul(cstr, &endptr, 0);
+			if (errno == ERANGE || cstr == endptr) return fallback;
+#else
 			try {
 				size_t idx;
-				unsigned long ul = std::stoul(_value, &idx, 0);
+				unsigned long ul = _TORTELLINI_stoul(_value, &idx, 0);
+#endif
 
 				if (
 					   sizeof(unsigned int) != sizeof(unsigned long)
@@ -288,11 +360,13 @@ public:
 				}
 
 				return static_cast<unsigned int>(ul);
+#ifndef TORTELLINI_NO_EXCEPTIONS
 			} catch (std::out_of_range &) {
 				return fallback;
 			} catch (std::invalid_argument &) {
 				return fallback;
 			}
+#endif
 		}
 	};
 
