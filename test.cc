@@ -516,6 +516,24 @@ TEST_CASE("Iterating an INI") {
 				FAIL("too many sections");
 				break;
 			}
+
+			SECTION("Can iterate values") {
+				for (const auto& keyval_pair : section_pair.section)
+				{
+					const auto& keyname = keyval_pair.first;
+					const auto& valuestr = keyval_pair.second;
+					if (name == "foo") {
+						CHECK((keyname == "foo1" || keyname == "foo2") == true);
+						CHECK((valuestr == "true" || valuestr == "1234") == true);
+					} else if (name == "bar") {
+						CHECK((keyname == "bar1" || keyname == "bar2") == true);
+						CHECK((valuestr == "hello" || valuestr == "12345") == true);
+					} else {
+						FAIL("too many sections");
+						break;
+					}
+				}
+			}
 		}
 	}
 }
